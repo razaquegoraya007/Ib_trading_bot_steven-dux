@@ -1,0 +1,31 @@
+api:
+  host: "127.0.0.1"
+  port: 7497
+  client_id: 12345
+
+general:
+  max_position_percentage: 0.01  # Max 1% of volume/float
+  risk_tolerance: 0.1
+
+strategies:
+  bounce_short:
+    volume_threshold: 200000
+    spike_percentage: 50
+    max_position_size: 1000
+  dip_buy:
+    market_cap_min: 1e9
+    pullback_percentage: 0.5
+    max_position_size: 500
+  first_red_day:
+    extension_percentage: 300
+    max_position_size: 1000
+  overextended_gap_down:
+    gap_percentage_min: 5
+    gap_percentage_max: 15
+    max_position_size: 750
+  pre_market_breakout:
+    pre_market_volume: 100000
+    price_range: [5, 20]
+  double_layer_resistance:
+    consolidation_hours: 3
+    volume_threshold: 4000000
