@@ -13,9 +13,10 @@ def bounce_short_strategy(symbol, data):
         print(f"Missing required data for {symbol}. Skipping Bounce Short strategy.")
         return None
 
-    # Strategy logic: Short if price exceeds a threshold
-    if last_price > 1.05 * bid:
-        print(f"Short signal triggered for {symbol} at {last_price}.")
+    # Strategy logic: Short if the price exceeds a threshold (5% above the bid price)
+    bounce_threshold = 1.05  # Example threshold: 5% above the bid
+    if last_price > bounce_threshold * bid:
+        print(f"Bounce Short signal triggered for {symbol}. Shorting at {last_price}.")
 
         # Create the contract for the stock
         contract = Stock(symbol, "SMART", "USD")
@@ -26,7 +27,9 @@ def bounce_short_strategy(symbol, data):
             "action": "SELL",
             "quantity": 100,  # Define the quantity
             "contract": contract,
+            "price": last_price,
+            "reason": "Bounce Short",
         }
 
-    print(f"No short signal for {symbol}.")
+    print(f"No Bounce Short signal for {symbol}.")
     return None

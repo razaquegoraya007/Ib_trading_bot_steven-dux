@@ -1,6 +1,5 @@
-import os
 import logging
-from utils.data_loader import fetch_real_time_data
+from utils.data_loader import fetch_all_stocks, fetch_real_time_data
 from utils.trade_executor import execute_trade
 from strategies.bounce_short import bounce_short_strategy
 from strategies.dip_buy import dip_buy_strategy
@@ -13,9 +12,28 @@ from strategies.gap_up_short import gap_up_short_strategy
 # Set up logging
 logging.basicConfig(filename="logs/trade_log.csv", level=logging.INFO, format="%(asctime)s,%(message)s")
 
+PRICE_RANGE = (5, 20)
+
 def main():
     print("Starting trading bot...")
-    symbols = ["AAPL", "AMZN", "MSFT"]
+    print("Scanning for stocks within the $5-$20 price range...")
+
+    # Fetch all stocks dynamically
+    all_stocks = fetch_all_stocks()
+    print(f"Total stocks found: {len(all_stocks)}")
+
+    # Filter stocks based on the price range and valid data
+    filtered_symbols = []
+    for symbol in all_stocks:
+        data = fetch_real_time_data(symbol)
+        if data and data["last_price"] is not None and PRICE_RANGE[0] <= data["last_price"] <= PRICE_RANGE[1]:
+            filtered_symbols.append(symbol)
+        else:
+            print(f"Skipping {symbol}: Not within range or invalid data.")
+
+    print(f"Stocks within range: {filtered_symbols}")
+
+    # Define strategies
     strategies = [
         bounce_short_strategy,
         dip_buy_strategy,
@@ -26,8 +44,8 @@ def main():
         gap_up_short_strategy,
     ]
 
-    # Fetch real-time data for each symbol and apply strategies
-    for symbol in symbols:
+    # Apply strategies
+    for symbol in filtered_symbols:
         print(f"\nFetching data for {symbol}...")
         data = fetch_real_time_data(symbol)
         if data is None:
