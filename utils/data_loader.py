@@ -1,4 +1,5 @@
 from ib_insync import IB, Stock, ScannerSubscription
+import math
 
 def fetch_all_stocks():
     """Fetch all available stocks dynamically."""
@@ -7,7 +8,6 @@ def fetch_all_stocks():
         print("Connecting to IB Gateway...")
         ib.connect("127.0.0.1", 4001, clientId=3)
 
-        # Create a scanner subscription for stocks
         print("Fetching all available stock symbols...")
         scanner = ScannerSubscription(
             instrument='STK',  # Stock instrument
@@ -16,8 +16,6 @@ def fetch_all_stocks():
         )
 
         results = ib.reqScannerData(scanner)
-
-        # Extract stock symbols from scanner results
         stocks = [item.contractDetails.contract.symbol for item in results]
         print(f"Fetched {len(stocks)} stocks.")
         return stocks
@@ -44,38 +42,40 @@ def fetch_real_time_data(symbol):
         ticker = ib.reqMktData(contract)
         ib.sleep(2)  # Wait for data to arrive
 
-        # Fallback: Fetch historical price if last_price is invalid
-        if ticker.last is None or str(ticker.last).lower() == "nan":
-            print(f"Invalid or missing last price for {symbol}. Attempting fallback...")
-            bars = ib.reqHistoricalData(
-                contract,
-                endDateTime='',
-                durationStr='1 D',
-                barSizeSetting='5 mins',
-                whatToShow='TRADES',
-                useRTH=True
-            )
-            if bars:
-                last_price = bars[-1].close  # Use the most recent close price as a fallback
-                print(f"Fallback last price for {symbol}: {last_price}")
-            else:
-                print(f"Fallback failed for {symbol}. Skipping...")
-                return None
-        else:
-            last_price = ticker.last
+        print(f"Fetching historical data for pre-market high for: {symbol}")
+        bars = ib.reqHistoricalData(
+            contract,
+            endDateTime='',
+            durationStr='1 D',
+            barSizeSetting='1 min',
+            whatToShow='TRADES',
+            useRTH=False
+        )
 
-        print(f"Data received for {symbol}: Last price: {last_price}")
-        return {
-            "symbol": symbol,
-            "last_price": last_price,
-            "volume": ticker.volume,
-            "bid": ticker.bid,
-            "ask": ticker.ask,
-            "previous_close": ticker.close,
-            "opening_price": ticker.open,
-            "pre_market_high": None,  # You can add additional logic here if needed
-            "resistance_levels": []
-        }
+        pre_market_high = None
+        for bar in bars:
+            if bar.date.hour < 9 or (bar.date.hour == 9 and bar.date.minute < 30):
+                if pre_market_high is None or bar.high > pre_market_high:
+                    pre_market_high = bar.high
+
+        resistance_levels = sorted([bar.high for bar in bars if not math.isnan(bar.high)], reverse=True)[:2]
+
+        if not math.isnan(ticker.last):
+            print(f"Data received for {symbol}: Last price: {ticker.last}")
+            return {
+                "symbol": symbol,
+                "last_price": ticker.last,
+                "volume": ticker.volume,
+                "bid": ticker.bid,
+                "ask": ticker.ask,
+                "previous_close": ticker.close,
+                "opening_price": ticker.open,
+                "pre_market_high": pre_market_high,
+                "resistance_levels": resistance_levels
+            }
+        else:
+            print(f"No valid last price for {symbol}.")
+            return None
 
     except Exception as e:
         print(f"Error fetching data for {symbol}: {e}")
